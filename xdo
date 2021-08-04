@@ -1,0 +1,124 @@
+#!/usr/bin/bash
+#################################################
+#   author      0x5c0f
+#   date        2021-08-02
+#   email       mail@0x5c0f.cc
+#   web         blog.0x5c0f.cc
+#   version     1.2.0
+#   last update 2021-08-03
+#   descript    非粘贴型密码输入脚本
+#################################################
+
+PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:~/bin
+export PATH
+
+declare -r SCHEMA="org.gnome.settings-daemon.plugins.media-keys"
+declare -r KEY="custom-keybindings"
+declare -r CONFIG="${HOME}/.xdotool/config"
+
+function keyBinds() {
+    local KEYNAME="$1"
+    local BINDKEY="$2"
+    local KEYSCRIPT="$3"
+    local KEYID=$(echo ${KEYNAME} | md5sum | awk '{print $1}')
+
+    echo $1 $2 $3
+
+    # 搜索原有配置
+    OLDBIND=$(gsettings get $SCHEMA $KEY)
+    NEWKEY="/${SCHEMA//./\/}/${KEY}/${KEYID}/"
+    # 新增一个绑定
+    echo $OLDBIND | grep $KEY >&/dev/null && {
+        echo $OLDBIND | grep "$(echo $KEYNAME | md5sum | awk '{print $1}')" >&/dev/null || {
+            # 存在且不重复，叠加原有绑定
+            gsettings set $SCHEMA $KEY "${OLDBIND/%\]/,} '${NEWKEY}']"
+        }
+    } || {
+        # 不存在，完全新增
+        gsettings set org.gnome.settings-daemon.plugins.media-keys custom-keybindings "['${NEWKEY}']"
+    }
+
+    # 设置快捷键名称
+    gsettings set ${SCHEMA}.${KEY%s}:${NEWKEY} name "${KEYNAME}"
+
+    # 设置按键脚本
+    gsettings set ${SCHEMA}.${KEY%s}:${NEWKEY} command "${KEYSCRIPT}"
+
+    # 设置绑定按键
+    gsettings set ${SCHEMA}.${KEY%s}:${NEWKEY} binding "${BINDKEY}"
+
+}
+
+# 检查绑定键
+function keyInit() {
+    clength=$(cat ${CONFIG} | jq length)
+
+    for ((i = 0; i < clength; i++)); do
+        # keyBinds name bindkey bindscript
+        local name=$(cat ${CONFIG} | jq .[${i}].name | tr -d '"')
+        local bindkey=$(cat ${CONFIG} | jq .[${i}].bindKey | tr -d '"')
+        local bindscript=$(cat ${CONFIG} | jq .[${i}].bindScript | tr -d '"')
+        
+        test $bindscript == null && bindscript="/usr/local/bin/xdo"
+
+        keyBinds "$name" "$bindkey" "${bindscript} $(cat ${CONFIG} | jq .[${i}].name | tr -d '"'|md5sum |head -c 5)"
+    done
+}
+
+# 消息键入
+function msgSend(){
+    MOUSE_SUB=$(xdotool getmouselocation | awk -F'[ :]' '{print $2,$4}')
+    sleep 0.1
+
+    xdotool mousemove $MOUSE_SUB click 1
+    sleep 0.1
+
+    clength=$(cat ${CONFIG} | jq length)
+    for ((i = 0; i < clength; i++)); do
+        # keyBinds name bindkey bindscript
+        if [ "$(cat ${CONFIG} |jq .[${i}].name|tr -d '"'|md5sum |head -c 5)" == "${1}" ]; then
+            text=$(cat ${CONFIG} |jq .[${i}].text|tr -d '"')
+            test $text == null && {
+                # from shear plate
+                xdotool type "$(xsel -ob)"
+            } || {
+                xdotool type "$(echo $text|base64 -d)"
+            }
+            return 0
+        fi
+    done
+}
+
+
+function main(){
+
+    test -f "$(dirname $CONFIG)"/.rpmlock || {
+        rpm -qa|grep -w xdotool >& /dev/null || {
+            echo "xdotool not install ..."
+            exit 1
+        }
+
+        rpm -qa|grep -w jq >& /dev/null || {
+            echo "jq not install ..."
+            exit 1
+        }
+
+        rpm -qa|grep -w xsel >& /dev/null || {
+            echo "xsel not install ..."
+            exit 1
+        }
+
+        touch "$(dirname $CONFIG)"/.rpmlock
+    } 
+
+    case $1 in
+        init)
+            keyInit
+        ;;
+        *)
+          msgSend $@
+        ;;
+    esac
+}
+
+main $@

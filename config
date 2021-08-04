@@ -1,0 +1,14 @@
+[
+  {
+    "name": "gggg",
+    "bindKey": "F6",
+    "bindScript": null,
+    "text": "5rWL6K+V5YaF5a65MDI="
+  },
+  {
+    "name": "xxxx",
+    "bindKey": "F9",
+    "bindScript": "/home/<User>/.xdotool/xdo",
+    "text": null
+  }
+]
