@@ -1,7 +1,7 @@
 # 非粘贴型密码输入  
 ---  
 
-`windows`下有一个叫 [`非粘贴型密码输入工具`](https://www.aliyundrive.com/s/7zvxAmNdm7L) ，非常好用，奈何`linux`下似乎没有，然后我自己写了个简单的，基本能满足自己需求。  
+`windows`下有一个叫 [`非粘贴型密码输入工具`](https://www.aliyundrive.com/s/iNkxto38S3X) ，非常好用，奈何`linux`下似乎没有，然后我自己写了个简单的，基本能满足自己需求。  
 
 原理是利用`gnome`自定义快捷键加上 [`xdotool`](https://www.semicomplete.com/projects/xdotool/) 的键鼠模拟功能实现的  
 
